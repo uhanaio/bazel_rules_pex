@@ -48,12 +48,12 @@ so that Bazel can find your `prelude_bazel` file.
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-pex_file_types = FileType([".py"])
-egg_file_types = FileType([".egg", ".whl"])
-req_file_types = FileType([".txt"])
+pex_file_types = [".py"]
+egg_file_types = [".egg", ".whl"]
+req_file_types = [".txt"]
 
 # Repos file types according to: https://www.python.org/dev/peps/pep-0527/
-repo_file_types = FileType([
+repo_file_types = [
     ".egg",
     ".whl",
     ".tar.gz",
@@ -64,7 +64,7 @@ repo_file_types = FileType([
     ".tar.Z",
     ".tgz",
     ".tbz"
-])
+]
 
 # As much as I think this test file naming convention is a good thing, it's
 # probably a bad idea to impose it as a policy to all OSS users of these rules,
@@ -331,10 +331,6 @@ pex_attrs = {
                             allow_files = repo_file_types),
     "data": attr.label_list(allow_files = True, cfg="host"),
 
-    # required for pex_library targets in third_party subdirs
-    # but theoretically a common attribute for all rules
-    "licenses": attr.license(),
-
     # Used by pex_binary and pex_*test, not pex_library:
     "_pexbuilder": attr.label(
         default = Label("//pex:pex_wrapper"),
@@ -353,8 +349,7 @@ def _dmerge(a, b):
 
 
 pex_bin_attrs = _dmerge(pex_attrs, {
-    "main": attr.label(allow_files = True,
-                       single_file = True),
+    "main": attr.label(allow_single_file = True),
     "entrypoint": attr.string(),
     "interpreter": attr.string(),
     "pex_use_wheels": attr.bool(default=True),
@@ -448,8 +443,7 @@ _pytest_pex_test = rule(
             cfg = "target",
         ),
         "launcher_template": attr.label(
-            allow_files = True,
-            single_file = True,
+            allow_single_file = True,
             default = Label("//pex:testlauncher.sh.template"),
         ),
     }),
