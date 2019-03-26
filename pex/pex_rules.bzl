@@ -48,12 +48,12 @@ so that Bazel can find your `prelude_bazel` file.
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-pex_file_types = FileType(types=[".py"])
-egg_file_types = FileType(types=[".egg", ".whl"])
-req_file_types = FileType(types=[".txt"])
+pex_file_types = [".py"]
+egg_file_types = [".egg", ".whl"]
+req_file_types = [".txt"]
 
 # Repos file types according to: https://www.python.org/dev/peps/pep-0527/
-repo_file_types = FileType(types=[
+repo_file_types = [
     ".egg",
     ".whl",
     ".tar.gz",
@@ -64,7 +64,7 @@ repo_file_types = FileType(types=[
     ".tar.Z",
     ".tgz",
     ".tbz"
-])
+]
 
 # As much as I think this test file naming convention is a good thing, it's
 # probably a bad idea to impose it as a policy to all OSS users of these rules,
@@ -77,7 +77,7 @@ def _collect_transitive_sources(ctx):
   source_files = depset(order="postorder")
   for dep in ctx.attr.deps:
     source_files += dep.py.transitive_sources
-  source_files += pex_file_types.filter(ctx.files.srcs)
+  source_files += [f for f in ctx.files.srcs if f.extension in pex_file_types]
   return source_files
 
 
@@ -86,7 +86,7 @@ def _collect_transitive_eggs(ctx):
   for dep in ctx.attr.deps:
     if hasattr(dep.py, "transitive_eggs"):
       transitive_eggs += dep.py.transitive_eggs
-  transitive_eggs += egg_file_types.filter(ctx.files.eggs)
+  transitive_eggs += [f for f in ctx.files.eggs if f.extension in egg_file_types]
   return transitive_eggs
 
 
@@ -104,7 +104,7 @@ def _collect_repos(ctx):
   for dep in ctx.attr.deps:
     if hasattr(dep.py, "repos"):
       repos += dep.py.repos
-  for file in repo_file_types.filter(ctx.files.repos):
+  for file in [f for f in ctx.files.repos if f.extension in repo_file_types]:
     repos.update({file.dirname : True})
   return repos.keys()
 
@@ -176,7 +176,7 @@ def _pex_binary_impl(ctx):
   elif ctx.file.main:
     main_file = ctx.file.main
   else:
-    main_file = pex_file_types.filter(ctx.files.srcs)[0]
+    main_file = [f for f in ctx.files.srcs if f.extension in pex_file_types][0]
   if main_file:
     # Translate main_file's short path into a python module name
     main_pkg = main_file.short_path.replace('/', '.')[:-3]
