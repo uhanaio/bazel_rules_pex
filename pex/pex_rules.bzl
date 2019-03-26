@@ -48,22 +48,22 @@ so that Bazel can find your `prelude_bazel` file.
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-pex_file_types = [".py"]
-egg_file_types = [".egg", ".whl"]
-req_file_types = [".txt"]
+pex_file_types = ["py"]
+egg_file_types = ["egg", "whl"]
+req_file_types = ["txt"]
 
 # Repos file types according to: https://www.python.org/dev/peps/pep-0527/
 repo_file_types = [
-    ".egg",
-    ".whl",
-    ".tar.gz",
-    ".zip",
-    ".tar",
-    ".tar.bz2",
-    ".tar.xz",
-    ".tar.Z",
-    ".tgz",
-    ".tbz"
+    "egg",
+    "whl",
+    "tar.gz",
+    "zip",
+    "tar",
+    "tar.bz2",
+    "tar.xz",
+    "tar.Z",
+    "tgz",
+    "tbz"
 ]
 
 # As much as I think this test file naming convention is a good thing, it's
