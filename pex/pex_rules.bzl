@@ -66,45 +66,42 @@ repo_file_types = [
     "tbz"
 ]
 
-# As much as I think this test file naming convention is a good thing, it's
-# probably a bad idea to impose it as a policy to all OSS users of these rules,
-# so I guess let's skip it.
-#
-# pex_test_file_types = FileType(["_unittest.py", "_test.py"])
-
 
 def _collect_transitive_sources(ctx):
-  source_files = depset(order="postorder")
+  deps = []
   for dep in ctx.attr.deps:
-    source_files += dep.py.transitive_sources
-  source_files += [f for f in ctx.files.srcs if f.extension in pex_file_types]
-  return source_files
+    deps += dep.py.transitive_sources.to_list()
+  return depset(ctx.files.srcs,
+                transitive=[depset(deps)],
+                order="postorder")
 
 
 def _collect_transitive_eggs(ctx):
-  transitive_eggs = depset(order="postorder")
+  deps = []
   for dep in ctx.attr.deps:
     if hasattr(dep.py, "transitive_eggs"):
-      transitive_eggs += dep.py.transitive_eggs
-  transitive_eggs += [f for f in ctx.files.eggs if f.extension in egg_file_types]
-  return transitive_eggs
+      deps += dep.py.transitive_eggs.to_list()
+  return depset(ctx.files.eggs,
+                transitive=[depset(deps)],
+                order="postorder")
 
 
 def _collect_transitive_reqs(ctx):
-  transitive_reqs = depset(order="postorder")
+  deps = []
   for dep in ctx.attr.deps:
     if hasattr(dep.py, "transitive_reqs"):
-      transitive_reqs += dep.py.transitive_reqs
-  transitive_reqs += ctx.attr.reqs
-  return transitive_reqs
+      deps += dep.py.transitive_reqs.to_list()
+  return depset(ctx.attr.reqs,
+                transitive=[depset(deps)],
+                order="postorder")
 
 
 def _collect_repos(ctx):
   repos = {}
   for dep in ctx.attr.deps:
     if hasattr(dep.py, "repos"):
-      repos += dep.py.repos
-  for file in [f for f in ctx.files.repos if f.extension in repo_file_types]:
+      repos.update(dep.py.repos)
+  for file in ctx.files.repos:
     repos.update({file.dirname : True})
   return repos.keys()
 
@@ -166,8 +163,6 @@ def _gen_manifest(py, runfiles):
 
 
 def _pex_binary_impl(ctx):
-  transitive_files = depset(ctx.files.srcs)
-
   if ctx.attr.entrypoint and ctx.file.main:
     fail("Please specify either entrypoint or main, not both.")
   if ctx.attr.entrypoint:
@@ -176,7 +171,9 @@ def _pex_binary_impl(ctx):
   elif ctx.file.main:
     main_file = ctx.file.main
   else:
-    main_file = [f for f in ctx.files.srcs if f.extension in pex_file_types][0]
+    main_file = ctx.files.srcs[0]
+
+  transitive_files = list(ctx.files.srcs)
   if main_file:
     # Translate main_file's short path into a python module name
     main_pkg = main_file.short_path.replace('/', '.')[:-3]
@@ -189,10 +186,11 @@ def _pex_binary_impl(ctx):
   repos = _collect_repos(ctx)
 
   for dep in ctx.attr.deps:
-    transitive_files += dep.default_runfiles.files
+    transitive_files += dep.default_runfiles.files.to_list()
+
   runfiles = ctx.runfiles(
       collect_default = True,
-      transitive_files = transitive_files,
+      transitive_files = depset(transitive_files),
   )
 
   manifest_file = ctx.new_file(
